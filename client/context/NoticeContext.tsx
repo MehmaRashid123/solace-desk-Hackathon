@@ -14,7 +14,7 @@ export type Notice = {
   ticketId?: string;
   at: number;
   read: boolean;
-  kind: "status" | "booking" | "admin";
+  kind: "status" | "booking" | "admin" | "review";
 };
 
 type NoticeContextValue = {
@@ -90,6 +90,19 @@ export function NoticeProvider({ children }: { children: React.ReactNode }) {
       });
     };
 
+    const onWorkerReview = (payload: {
+      workerId: string;
+      review: { stars: number; comment: string | null; customerName: string };
+    }) => {
+      if (user.role !== "AGENT" || payload.workerId !== user.id) return;
+      const stars = "★".repeat(payload.review.stars);
+      push({
+        kind: "review",
+        title: "New customer review",
+        body: `${payload.review.customerName} rated you ${stars}${payload.review.comment ? ` — ${payload.review.comment}` : ""}`,
+      });
+    };
+
     const onAssigned = (ticket: Ticket) => {
       if (user.role !== "AGENT") return;
       if (isNew(ticket.status) && !ticket.assignedAgentId) {
@@ -101,12 +114,14 @@ export function NoticeProvider({ children }: { children: React.ReactNode }) {
     socket.on("ticket:assigned", onAssigned);
     socket.on("worker:newBooking", onNewBooking);
     socket.on("admin:workerSelected", onAdminWorkerSelected);
+    socket.on("worker:newReview", onWorkerReview);
     return () => {
       socket.off("connect", joinDash);
       socket.off("ticket:statusChanged", onStatus);
       socket.off("ticket:assigned", onAssigned);
       socket.off("worker:newBooking", onNewBooking);
       socket.off("admin:workerSelected", onAdminWorkerSelected);
+      socket.off("worker:newReview", onWorkerReview);
     };
   }, [socket, user, push]);
 

@@ -138,7 +138,7 @@ export async function createTicket(
         subject: input.subject,
         description: input.description,
         category: input.category?.trim() || null,
-        priority: "MEDIUM",
+        priority: null,
         customerId,
         status: "New",
         aiFailed: false,

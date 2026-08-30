@@ -11,6 +11,12 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<PublicUser>;
   register: (name: string, email: string, password: string, role?: "CUSTOMER" | "AGENT") => Promise<PublicUser>;
   logout: () => Promise<void>;
+  updateProfile: (body: {
+    name?: string;
+    avatarHue?: number;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => Promise<PublicUser>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -86,9 +92,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
   }, [accessToken]);
 
+  const updateProfile = useCallback(
+    async (body: {
+      name?: string;
+      avatarHue?: number;
+      currentPassword?: string;
+      newPassword?: string;
+    }) => {
+      if (!accessToken) throw new Error("Not signed in");
+      const session = await api<{ user: PublicUser }>("/auth/me", {
+        method: "PATCH",
+        token: accessToken,
+        body,
+      });
+      setUser(session.user);
+      return session.user;
+    },
+    [accessToken],
+  );
+
   const value = useMemo(
-    () => ({ user, accessToken, ready, login, register, logout }),
-    [user, accessToken, ready, login, register, logout],
+    () => ({ user, accessToken, ready, login, register, logout, updateProfile }),
+    [user, accessToken, ready, login, register, logout, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

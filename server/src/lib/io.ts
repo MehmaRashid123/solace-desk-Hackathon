@@ -59,9 +59,22 @@ export function emitWorkerResponded(ticket: { id: string }) {
   emitToTicketAndDashboard("ticket:workerResponded", ticket);
 }
 
-export function emitRatingSubmitted(ticketId: string, payload: unknown) {
+export function emitRatingSubmitted(
+  ticketId: string,
+  payload: {
+    workerId: string;
+    ticketId: string;
+    review: {
+      id: string;
+      stars: number;
+      comment: string | null;
+      customerName: string;
+      createdAt: string;
+    };
+  },
+) {
   const nsp = ticketsNsp();
   if (!nsp) return;
   nsp.to(rooms.ticket(ticketId)).emit("rating:submitted", payload);
-  nsp.to(rooms.dashboard).emit("rating:submitted", payload);
+  nsp.to(rooms.user(payload.workerId)).emit("worker:newReview", payload);
 }

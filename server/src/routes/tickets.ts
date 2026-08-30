@@ -21,7 +21,7 @@ import {
 } from "../services/tickets.js";
 import { prisma } from "../lib/prisma.js";
 import { parseOfficialCategory, parseOfficialPriority } from "../lib/taxonomy.js";
-import { draftTicketResolution, draftTicketRatingReview, runInternalTriage } from "../services/triage.js";
+import { draftTicketResolution, draftTicketRatingReview, previewTriage, runInternalTriage } from "../services/triage.js";
 import { findDuplicateTickets } from "../services/duplicates.js";
 import { submitWorkerRating } from "../services/ratings.js";
 import { sendOk } from "../lib/respond.js";
@@ -177,6 +177,21 @@ ticketsRouter.get("/:id", async (req, res, next) => {
   }
 });
 
+const triagePreviewSchema = z.object({
+  subject: z.string().min(4).max(140),
+  description: z.string().min(8).max(4000),
+});
+
+ticketsRouter.post("/triage-preview", requireRole("CUSTOMER", "ADMIN"), async (req, res, next) => {
+  try {
+    const body = triagePreviewSchema.parse(req.body);
+    const suggestion = await previewTriage(body);
+    sendOk(res, { suggestion });
+  } catch (err) {
+    next(err);
+  }
+});
+
 ticketsRouter.post("/", requireRole("CUSTOMER", "ADMIN"), async (req, res, next) => {
   try {
     const body = createSchema.parse(req.body);
@@ -288,10 +303,17 @@ ticketsRouter.post("/:id/rating", requireRole("CUSTOMER"), async (req, res, next
       throw new HttpError(404, "Ticket not found");
     }
     const result = await submitWorkerRating(currentUser(req), existing.id, body);
+    const actor = currentUser(req);
     emitRatingSubmitted(existing.id, {
       ticketId: existing.id,
-      rating: result.rating,
       workerId: result.workerId,
+      review: {
+        id: result.rating.id,
+        stars: result.rating.stars,
+        comment: result.rating.comment,
+        customerName: actor.name,
+        createdAt: result.rating.createdAt.toISOString(),
+      },
     });
     sendOk(res, { rating: result.rating, ticket: result.ticket }, 201);
   } catch (err) {

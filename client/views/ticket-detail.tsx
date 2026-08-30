@@ -16,6 +16,7 @@ import { TicketInfoPills, ticketPillIcons } from "@/components/TicketInfoPills";
 import { WorkerSelectionPanel } from "@/components/WorkerCard";
 import { WorkerRatingPanel, WorkerRatingSubmitted } from "@/components/WorkerRatingPanel";
 import { AiReviewCard } from "@/components/AiReviewCard";
+import { AiTriageSuggestion } from "@/components/AiTriageSuggestion";
 import { cn } from "@/lib/cn";
 import { ticketDetailPath, ticketsPath } from "@/lib/routes";
 import { mergeTicketUpdate } from "@/lib/mergeTicket";
@@ -131,17 +132,20 @@ export default function TicketDetailPage() {
     };
     const onRating = (payload: {
       ticketId: string;
-      rating: { id: string; stars: number; comment: string | null };
+      review?: { id: string; stars: number; comment: string | null };
+      rating?: { id: string; stars: number; comment: string | null };
     }) => {
       if (payload.ticketId !== id) return;
+      const rating = payload.review ?? payload.rating;
+      if (!rating) return;
       setTicket((prev) =>
         prev
           ? mergeTicketUpdate(prev, {
               ...prev,
               workerRating: {
-                id: payload.rating.id,
-                stars: payload.rating.stars,
-                comment: payload.rating.comment,
+                id: rating.id,
+                stars: rating.stars,
+                comment: rating.comment,
               },
             })
           : prev,
@@ -361,6 +365,18 @@ export default function TicketDetailPage() {
       </div>
 
       <TicketTimeline events={timelineEvents} />
+
+      {isCustomer && (ticket.aiPriority || ticket.aiCategory || ticket.aiSummary) ? (
+        <AiTriageSuggestion
+          compact
+          suggestion={{
+            ok: true,
+            category: ticket.aiCategory ?? ticket.category,
+            priority: ticket.aiPriority,
+            summary: ticket.aiSummary,
+          }}
+        />
+      ) : null}
 
       {showWorkerSelection && accessToken ? (
         <WorkerSelectionPanel

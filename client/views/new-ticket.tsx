@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { CATEGORIES } from "@/lib/format";
 import type { Ticket } from "@/lib/types";
 import { LoaderCircle } from "lucide-react";
+import { AiTriageSuggestion, type TriageSuggestion } from "@/components/AiTriageSuggestion";
 import { Button, Field, Glass, Input, Select, Textarea } from "@/components/ui";
 import { PageToolbar } from "@/components/AppShell";
 import { ticketDetailPath, ticketsPath } from "@/lib/routes";
@@ -20,11 +21,41 @@ export default function NewTicketPage() {
   const [category, setCategory] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<TriageSuggestion | null>(null);
+  const previewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (user && user.role !== "CUSTOMER" && user.role !== "ADMIN") router.replace(ticketsPath(user.role));
   }, [user, router]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    const ready = subject.trim().length >= 4 && description.trim().length >= 8;
+    if (!ready) {
+      setSuggestion(null);
+      setPreviewLoading(false);
+      return;
+    }
+
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    setPreviewLoading(true);
+    previewTimer.current = setTimeout(() => {
+      void api<{ suggestion: TriageSuggestion }>("/tickets/triage-preview", {
+        method: "POST",
+        token: accessToken,
+        body: { subject: subject.trim(), description: description.trim() },
+      })
+        .then((r) => setSuggestion(r.suggestion))
+        .catch(() => setSuggestion({ ok: false }))
+        .finally(() => setPreviewLoading(false));
+    }, 900);
+
+    return () => {
+      if (previewTimer.current) clearTimeout(previewTimer.current);
+    };
+  }, [accessToken, subject, description]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,6 +83,9 @@ export default function NewTicketPage() {
       if (duplicates?.length) {
         toast(`${duplicates.length} similar open ticket${duplicates.length === 1 ? "" : "s"} found`, "ok");
       }
+      if (ticket.aiPriority) {
+        toast(`AI suggests ${ticket.aiPriority} priority for this ticket`, "ok");
+      }
       router.push(ticketDetailPath(user!.role, ticket.id));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not create ticket";
@@ -63,7 +97,7 @@ export default function NewTicketPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageToolbar title="New ticket" subtitle="Describe your issue — you'll pick a worker on the next step." />
+      <PageToolbar title="New ticket" subtitle="Describe your issue — AI suggests priority as you type." />
       <Glass className="p-6">
         <form className="space-y-4" onSubmit={(e) => void submit(e)}>
           <Field label="Subject">
@@ -82,13 +116,15 @@ export default function NewTicketPage() {
               ))}
             </Select>
           </Field>
-          <p className="text-xs text-white/35">Category is optional. Priority starts as Medium until an agent reviews it.</p>
+
+          <AiTriageSuggestion suggestion={suggestion} loading={previewLoading} />
+
           {error ? <p className="text-sm text-rose-300">{error}</p> : null}
           <Button variant="pill" className="w-full" disabled={busy}>
             {busy ? (
               <span className="inline-flex items-center justify-center gap-2">
                 <LoaderCircle size={16} className="animate-spin" />
-                Analyzing ticket...
+                Creating ticket…
               </span>
             ) : (
               "Send ticket"

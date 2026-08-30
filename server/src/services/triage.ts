@@ -2,6 +2,27 @@ import { prisma } from "../lib/prisma.js";
 import { applyAiFailure, applyAiTriage } from "./tickets.js";
 import { draftResolutionNote, draftRatingReview, runTriagePrompt } from "./ai.js";
 
+export async function previewTriage(input: { subject: string; description: string }) {
+  try {
+    const result = await runTriagePrompt({
+      title: input.subject,
+      description: input.description,
+      messages: [{ role: "user", content: input.description }],
+    });
+    return {
+      ok: true as const,
+      category: result.raw.category,
+      priority: result.raw.priority,
+      summary: result.raw.summary,
+      source: result.source,
+    };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "AI_FAILED";
+    console.warn("Triage preview failed:", reason);
+    return { ok: false as const, reason };
+  }
+}
+
 export async function runInternalTriage(ticketId: string) {
   const ticket = await prisma.ticket.findUnique({
     where: { id: ticketId },

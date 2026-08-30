@@ -125,6 +125,23 @@ authRouter.post("/logout", async (req, res, next) => {
   }
 });
 
+const updateMeSchema = z
+  .object({
+    name: z.string().min(2).max(80).optional(),
+    avatarHue: z.number().int().min(0).max(359).optional(),
+    currentPassword: z.string().min(1).optional(),
+    newPassword: z.string().min(8).max(72).optional(),
+  })
+  .superRefine((body, ctx) => {
+    if (body.newPassword && !body.currentPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Current password is required to set a new password",
+        path: ["currentPassword"],
+      });
+    }
+  });
+
 authRouter.get("/me", auth, async (req, res, next) => {
   try {
     const { sub } = currentUser(req);
@@ -133,6 +150,38 @@ authRouter.get("/me", auth, async (req, res, next) => {
       sendFail(res, 404, "User not found");
       return;
     }
+    sendOk(res, { user: publicUser(user) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+authRouter.patch("/me", auth, async (req, res, next) => {
+  try {
+    const body = updateMeSchema.parse(req.body);
+    const { sub } = currentUser(req);
+    const existing = await prisma.user.findUnique({ where: { id: sub } });
+    if (!existing) {
+      sendFail(res, 404, "User not found");
+      return;
+    }
+
+    if (body.newPassword) {
+      const valid = await bcrypt.compare(body.currentPassword!, existing.passwordHash);
+      if (!valid) {
+        sendFail(res, 401, "Current password is incorrect");
+        return;
+      }
+    }
+
+    const user = await prisma.user.update({
+      where: { id: sub },
+      data: {
+        ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+        ...(body.avatarHue !== undefined ? { avatarHue: body.avatarHue } : {}),
+        ...(body.newPassword ? { passwordHash: await bcrypt.hash(body.newPassword, 12) } : {}),
+      },
+    });
     sendOk(res, { user: publicUser(user) });
   } catch (err) {
     next(err);
