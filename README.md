@@ -2,6 +2,12 @@
 
 **AI-assisted real-time support desk** — customers open tickets, choose workers, chat live, and leave reviews. Workers accept bookings, triage with AI, and resolve. Admins oversee the full queue and worker performance.
 
+## Live demo
+
+- **App:** https://solace-desk-hackathon.vercel.app *(or your Vercel URL)*
+- **API:** https://solace-desk-hackathon.onrender.com/health
+- **Demo login:** Sign-in page one-click chips · password `password123`
+
 > **For evaluators:** Everything below is written step-by-step so you can run and review the project in under 10 minutes. Demo accounts are pre-loaded and available as **one-click buttons on the sign-in page** — no need to copy-paste credentials.
 
 ---
