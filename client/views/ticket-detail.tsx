@@ -20,6 +20,7 @@ import { AiTriageSuggestion } from "@/components/AiTriageSuggestion";
 import { cn } from "@/lib/cn";
 import { ticketDetailPath, ticketsPath } from "@/lib/routes";
 import { mergeTicketUpdate } from "@/lib/mergeTicket";
+import { unwrapTicketPayload } from "@/lib/apiHelpers";
 import { isAccepted, isCompleted, isInProgress, isNew } from "@/lib/ticketStatus";
 import { useToast } from "@/context/ToastContext";
 
@@ -55,7 +56,8 @@ export default function TicketDetailPage() {
     };
   }
 
-  function applyTicket(next: Ticket) {
+  function applyTicket(next: Ticket | null | undefined) {
+    if (!next?.id) return;
     setTicket(next);
     setResolutionNote(next.resolutionNote ?? "");
     const suggestion = suggestionFrom(next);
@@ -70,11 +72,12 @@ export default function TicketDetailPage() {
     setLoadError(null);
     void api<{ ticket: Ticket }>(`/tickets/${id}`, { token: accessToken })
       .then((r) => {
-        applyTicket(r.ticket);
+        const loaded = unwrapTicketPayload(r);
+        applyTicket(loaded);
         setEditing({
-          category: Boolean(r.ticket.aiFailed && !r.ticket.category),
-          priority: Boolean(r.ticket.aiFailed && !r.ticket.priority),
-          summary: Boolean(r.ticket.aiFailed && !r.ticket.aiSummary),
+          category: Boolean(loaded.aiFailed && !loaded.category),
+          priority: Boolean(loaded.aiFailed && !loaded.priority),
+          summary: Boolean(loaded.aiFailed && !loaded.aiSummary),
         });
       })
       .catch((err) => {
@@ -91,7 +94,7 @@ export default function TicketDetailPage() {
     setLoadError(null);
     void api<{ ticket: Ticket }>(`/tickets/${id}`, { token: accessToken })
       .then((r) => {
-        applyTicket(r.ticket);
+        applyTicket(unwrapTicketPayload(r));
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : "Could not load ticket"))
       .finally(() => setLoading(false));
@@ -106,12 +109,13 @@ export default function TicketDetailPage() {
     const join = () => socket.emit("ticket:join", id);
     join();
     socket.on("connect", join);
-    const onMessage = (payload: { ticketId: string; message: Message }) => {
-      if (payload.ticketId !== id) return;
+    const onMessage = (payload: { ticketId: string; message?: Message }) => {
+      const incoming = payload.message;
+      if (payload.ticketId !== id || !incoming?.id) return;
       setTicket((prev) => {
         if (!prev) return prev;
-        const exists = prev.messages?.some((m) => m.id === payload.message.id);
-        return { ...prev, messages: exists ? prev.messages : [...(prev.messages ?? []), payload.message] };
+        const exists = prev.messages?.some((m) => m.id === incoming.id);
+        return { ...prev, messages: exists ? prev.messages : [...(prev.messages ?? []), incoming] };
       });
     };
     const onTicket = (next: Ticket) => {
@@ -177,6 +181,7 @@ export default function TicketDetailPage() {
         token: accessToken,
         body: { body: draft.trim() },
       });
+      if (!message?.id) throw new Error("Invalid message response");
       setTicket((prev) => {
         if (!prev) return prev;
         const exists = prev.messages?.some((m) => m.id === message.id);
@@ -203,7 +208,7 @@ export default function TicketDetailPage() {
         token: accessToken,
         body: { workerId },
       });
-      applyTicket(next);
+      applyTicket(unwrapTicketPayload({ ticket: next }));
       toast("Worker selected — waiting for their response", "ok");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not select worker";
@@ -391,7 +396,8 @@ export default function TicketDetailPage() {
         <WorkerRatingPanel
           ticket={ticket}
           accessToken={accessToken}
-          onSubmitted={(next, rating) =>
+          onSubmitted={(next, rating) => {
+            if (!rating?.id) return;
             setTicket((prev) =>
               prev
                 ? mergeTicketUpdate(prev, {
@@ -400,8 +406,8 @@ export default function TicketDetailPage() {
                     messages: prev.messages,
                   })
                 : next,
-            )
-          }
+            );
+          }}
         />
       ) : null}
 
@@ -415,7 +421,7 @@ export default function TicketDetailPage() {
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto p-5">
-          {(ticket.messages ?? []).map((message) => {
+          {(ticket.messages ?? []).filter((m) => m?.id).map((message) => {
             const mine = message.senderId === user?.id;
             return (
               <div key={message.id} className={cn("flex gap-3", mine ? "flex-row-reverse" : "")}>

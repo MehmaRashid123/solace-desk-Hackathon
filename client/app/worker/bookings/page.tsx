@@ -7,6 +7,7 @@ import { PageToolbar } from "@/components/DashboardLayout";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import { api } from "@/lib/api";
+import { unwrapTicketList } from "@/lib/apiHelpers";
 import { listenTicketList } from "@/lib/liveTickets";
 import type { Ticket, TicketPriority } from "@/lib/types";
 import { useToast } from "@/context/ToastContext";
@@ -26,7 +27,7 @@ export default function WorkerBookingsPage() {
     setLoading(true);
     setError(null);
     void api<{ tickets: Ticket[] }>("/tickets/mine", { token: accessToken })
-      .then((r) => setTickets(r.tickets))
+      .then((r) => setTickets(unwrapTicketList(r)))
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Could not load bookings";
         setError(message);

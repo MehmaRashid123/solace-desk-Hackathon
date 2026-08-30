@@ -6,6 +6,7 @@ import { ArrowRight, Plus, RefreshCw, Star } from "lucide-react";
 import { StatCard } from "@/components/dashboard";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { unwrapTicketList } from "@/lib/apiHelpers";
 import { statusLabel } from "@/lib/format";
 import type { Ticket } from "@/lib/types";
 import { newTicketPath, ticketDetailPath } from "@/lib/routes";
@@ -38,7 +39,7 @@ export default function CustomerDashboardPage() {
     setError(null);
     try {
       const ticketsRes = await api<{ tickets: Ticket[] }>("/tickets/mine", { token: accessToken });
-      setTickets(ticketsRes.tickets);
+      setTickets(unwrapTicketList(ticketsRes));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load your dashboard");
     } finally {

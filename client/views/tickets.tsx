@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import { api } from "@/lib/api";
+import { unwrapTicketList } from "@/lib/apiHelpers";
 import { CATEGORIES, statusLabel } from "@/lib/format";
 import type { Ticket, TicketPriority, TicketStatus } from "@/lib/types";
 import { listenTicketList } from "@/lib/liveTickets";
@@ -32,7 +33,7 @@ export default function TicketsPage() {
     setError(null);
     const path = user?.role === "CUSTOMER" ? "/tickets/mine" : "/tickets";
     void api<{ tickets: Ticket[] }>(path, { token: accessToken })
-      .then((r) => setTickets(r.tickets))
+      .then((r) => setTickets(unwrapTicketList(r)))
       .catch((err) => {
         const message = err instanceof Error ? err.message : "Could not load tickets";
         setError(message);

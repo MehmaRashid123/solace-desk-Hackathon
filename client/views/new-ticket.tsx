@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { unwrapTicketPayload } from "@/lib/apiHelpers";
 import { CATEGORIES } from "@/lib/format";
 import type { Ticket } from "@/lib/types";
 import { LoaderCircle } from "lucide-react";
@@ -47,7 +48,7 @@ export default function NewTicketPage() {
         token: accessToken,
         body: { subject: subject.trim(), description: description.trim() },
       })
-        .then((r) => setSuggestion(r.suggestion))
+        .then((r) => setSuggestion(r?.suggestion ?? { ok: false }))
         .catch(() => setSuggestion({ ok: false }))
         .finally(() => setPreviewLoading(false));
     }, 900);
@@ -71,7 +72,7 @@ export default function NewTicketPage() {
     setBusy(true);
     setError("");
     try {
-      const { ticket, duplicates } = await api<{ ticket: Ticket; duplicates?: Ticket[] }>("/tickets", {
+      const data = await api<{ ticket: Ticket; duplicates?: Ticket[] }>("/tickets", {
         method: "POST",
         token: accessToken,
         body: {
@@ -80,13 +81,22 @@ export default function NewTicketPage() {
           ...(category ? { category } : {}),
         },
       });
+      const ticket = unwrapTicketPayload(data);
+      const duplicates = Array.isArray((data as { duplicates?: Ticket[] }).duplicates)
+        ? (data as { duplicates?: Ticket[] }).duplicates
+        : undefined;
       if (duplicates?.length) {
         toast(`${duplicates.length} similar open ticket${duplicates.length === 1 ? "" : "s"} found`, "ok");
       }
       if (ticket.aiPriority) {
         toast(`AI suggests ${ticket.aiPriority} priority for this ticket`, "ok");
       }
-      router.push(ticketDetailPath(user!.role, ticket.id));
+      if (!user) {
+        setError("Session expired — please sign in again");
+        setBusy(false);
+        return;
+      }
+      router.push(ticketDetailPath(user.role, ticket.id));
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not create ticket";
       setError(message);

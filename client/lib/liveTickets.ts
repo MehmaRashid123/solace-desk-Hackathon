@@ -4,6 +4,7 @@ import type { Ticket } from "./types";
 import { mergeTicketUpdate } from "./mergeTicket";
 
 export function upsertTicket(prev: Ticket[], ticket: Ticket) {
+  if (!ticket?.id) return prev;
   const i = prev.findIndex((t) => t.id === ticket.id);
   if (i === -1) return [ticket, ...prev];
   const next = [...prev];
@@ -21,6 +22,7 @@ export function listenTicketList(
   options?: { filter?: (ticket: Ticket) => boolean },
 ) {
   const onChange = (ticket: Ticket) => {
+    if (!ticket?.id) return;
     setTickets((prev) => {
       if (options?.filter && !options.filter(ticket)) {
         return prev.filter((row) => row.id !== ticket.id);

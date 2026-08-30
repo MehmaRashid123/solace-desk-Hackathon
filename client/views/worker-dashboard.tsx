@@ -12,6 +12,7 @@ import { normalizePriority, relativeTime } from "@/lib/format";
 import type { Message, Ticket, TicketPriority } from "@/lib/types";
 import { ticketDetailPath } from "@/lib/routes";
 import { mergeTicketUpdate } from "@/lib/mergeTicket";
+import { unwrapTicketList } from "@/lib/apiHelpers";
 import { Button, Field, Glass, PriorityChip, Skeleton, StatusBadge, Textarea } from "@/components/ui";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -123,7 +124,7 @@ export default function WorkerDashboardPage() {
       }
       try {
         const ticketsRes = await api<{ tickets: Ticket[] }>("/tickets/mine", { token: accessToken });
-        setTickets(ticketsRes.tickets);
+        setTickets(unwrapTicketList(ticketsRes));
       } catch (err) {
         const message = err instanceof Error ? err.message : "Could not load dashboard";
         if (!opts?.silent) setError(message);

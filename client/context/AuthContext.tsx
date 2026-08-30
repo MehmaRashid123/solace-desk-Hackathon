@@ -105,6 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token: accessToken,
         body,
       });
+      if (!session?.user?.id) {
+        throw new Error("Profile update failed — invalid server response");
+      }
       setUser(session.user);
       return session.user;
     },

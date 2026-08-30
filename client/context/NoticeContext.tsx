@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
 import { api } from "@/lib/api";
+import { unwrapTicketList } from "@/lib/apiHelpers";
 import type { Ticket } from "@/lib/types";
 import { isNew } from "@/lib/ticketStatus";
 
@@ -129,7 +130,7 @@ export function NoticeProvider({ children }: { children: React.ReactNode }) {
     if (!socket || !accessToken || user?.role !== "CUSTOMER") return;
     let ids: string[] = [];
     void api<{ tickets: Ticket[] }>("/tickets/mine", { token: accessToken }).then((r) => {
-      ids = r.tickets.map((t) => t.id);
+      ids = unwrapTicketList(r).map((t) => t.id);
       ids.forEach((id) => socket.emit("ticket:join", id));
     });
     return () => {
