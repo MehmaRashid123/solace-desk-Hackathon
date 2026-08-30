@@ -1,12 +1,24 @@
 import { Router } from "express";
 import { z } from "zod";
-import { auth, requireRole, routeId } from "../middleware/auth.js";
+import { auth, currentUser, requireRole, routeId } from "../middleware/auth.js";
 import { sendOk } from "../lib/respond.js";
 import { HttpError } from "../lib/httpError.js";
 import { getWorkerProfile, getWorkerReviews, listWorkerProfiles } from "../services/workers.js";
 
 export const workersRouter = Router();
 workersRouter.use(auth);
+
+workersRouter.get("/me", requireRole("AGENT"), async (req, res, next) => {
+  try {
+    const { sub } = currentUser(req);
+    const worker = await getWorkerProfile(sub);
+    if (!worker) throw new HttpError(404, "Worker profile not found");
+    const reviews = await getWorkerReviews(sub, 20);
+    sendOk(res, { worker, reviews });
+  } catch (err) {
+    next(err);
+  }
+});
 
 workersRouter.get("/", requireRole("CUSTOMER", "ADMIN"), async (req, res, next) => {
   try {
