@@ -123,7 +123,7 @@ export default function CustomerDashboardPage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <StatCard label="Open Tickets" value={customerOpenCount(tickets)} />
             <StatCard label="In Progress" value={customerInProgressCount(tickets)} />
-            <StatCard label="Completed" value={customerCompletedCount(tickets)} />
+            <StatCard label="Resolved" value={customerCompletedCount(tickets)} />
           </div>
 
           <div>

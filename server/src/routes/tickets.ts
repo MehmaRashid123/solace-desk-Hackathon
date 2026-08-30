@@ -24,7 +24,14 @@ import { parseOfficialCategory, parseOfficialPriority } from "../lib/taxonomy.js
 import { draftTicketResolution, draftTicketRatingReview, previewTriage, runInternalTriage } from "../services/triage.js";
 import { findDuplicateTickets } from "../services/duplicates.js";
 import { submitWorkerRating } from "../services/ratings.js";
+import { invalidateStatsCache } from "../services/stats.js";
 import { sendOk } from "../lib/respond.js";
+import {
+  sendNewMessageEmail,
+  sendTicketCreatedEmail,
+  sendTicketResolvedEmail,
+  sendWorkerAssignedEmail,
+} from "../services/email.js";
 
 export const ticketsRouter = Router();
 ticketsRouter.use(auth);
@@ -213,6 +220,10 @@ ticketsRouter.post("/", requireRole("CUSTOMER", "ADMIN"), async (req, res, next)
       scopeCustomerId: actor.role === "CUSTOMER" ? actor.sub : undefined,
     });
     emitStatusChanged(result);
+    invalidateStatsCache();
+    if (result.customer) {
+      sendTicketCreatedEmail(result, result.customer);
+    }
     sendOk(res, { ticket: result, duplicates }, 201);
   } catch (err) {
     next(err);
@@ -226,6 +237,10 @@ ticketsRouter.patch("/:id/assign", requireRole("AGENT", "ADMIN"), async (req, re
     const ticket = await claimTicket(currentUser(req), existing.id);
     emitAssigned(ticket);
     emitStatusChanged(ticket);
+    invalidateStatsCache();
+    if (ticket.assignedAgent && ticket.customer) {
+      sendWorkerAssignedEmail(ticket, ticket.assignedAgent, ticket.customer);
+    }
     sendOk(res, { ticket });
   } catch (err) {
     next(err);
@@ -241,6 +256,10 @@ ticketsRouter.patch("/:id/select-worker", requireRole("CUSTOMER"), async (req, r
     }
     const ticket = await selectWorker(currentUser(req), existing.id, body.workerId);
     emitWorkerSelected(body.workerId, ticket);
+    invalidateStatsCache();
+    if (ticket.assignedAgent && ticket.customer) {
+      sendWorkerAssignedEmail(ticket, ticket.assignedAgent, ticket.customer);
+    }
     sendOk(res, { ticket });
   } catch (err) {
     next(err);
@@ -333,6 +352,10 @@ ticketsRouter.patch("/:id/status", requireRole("AGENT", "ADMIN"), async (req, re
       emitMessageNew(ticket.id, { ticketId: ticket.id, message: completionMessage });
     }
     emitStatusChanged(ticket);
+    invalidateStatsCache();
+    if (body.status === "Completed" && body.resolutionNote && ticket.customer) {
+      sendTicketResolvedEmail(ticket, ticket.customer, body.resolutionNote, ticket.assignedAgent?.name ?? "Your support worker");
+    }
     sendOk(res, { ticket, message: completionMessage ?? undefined });
   } catch (err) {
     next(err);
@@ -382,6 +405,17 @@ ticketsRouter.post("/:id/messages", async (req, res, next) => {
     assertTicketOwner(actor, existing, actor.role === "AGENT" ? "assigned" : "view");
     const message = await addMessage(actor, existing.id, body);
     emitMessageNew(message.ticketId, { ticketId: message.ticketId, message });
+    const recipientId = actor.sub === existing.customerId ? existing.assignedAgentId : existing.customerId;
+    if (recipientId) {
+      void prisma.user.findUnique({
+        where: { id: recipientId },
+        select: { name: true, email: true, role: true },
+      }).then((recipient) => {
+        if (recipient?.email) {
+          sendNewMessageEmail(existing, message.body, { name: actor.name, role: actor.role }, recipient);
+        }
+      }).catch((err) => console.error("[EMAIL MESSAGE NOTIFICATION FAILED]", err));
+    }
     sendOk(res, { message }, 201);
   } catch (err) {
     next(err);

@@ -166,10 +166,14 @@ Password for all: **`password123`**
 
 - [x] JWT auth + refresh cookie + role guards
 - [x] Socket.IO real-time (messages, status, bookings, typing)
+- [x] Email notifications (ticket created, assigned, new message, resolved)
+- [x] Redis caching with in-memory fallback for dashboard analytics
+- [x] Background job queue (asynchronous emails, AI triage, cache invalidation)
+- [x] GraphQL endpoint (`/graphql`) with query and mutation support
 - [x] AI triage with timeout + keyword fallback
 - [x] Targeted notifications (role-specific socket events)
-- [x] API tests (16 passing)
-- [x] Docker Compose for Postgres + full stack
+- [x] API tests (29 passing)
+- [x] Docker Compose for Postgres + Redis + full stack
 - [x] Demo seed data
 - [x] Sign-in page demo account chips for evaluators
 

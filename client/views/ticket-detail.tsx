@@ -17,6 +17,7 @@ import { WorkerSelectionPanel } from "@/components/WorkerCard";
 import { WorkerRatingPanel, WorkerRatingSubmitted } from "@/components/WorkerRatingPanel";
 import { AiReviewCard } from "@/components/AiReviewCard";
 import { AiTriageSuggestion } from "@/components/AiTriageSuggestion";
+import { DuplicateTicketsPanel } from "@/components/DuplicateTicketsPanel";
 import { cn } from "@/lib/cn";
 import { ticketDetailPath, ticketsPath } from "@/lib/routes";
 import { mergeTicketUpdate } from "@/lib/mergeTicket";
@@ -29,6 +30,7 @@ export default function TicketDetailPage() {
   const { user, accessToken } = useAuth();
   const { socket } = useSocket();
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [duplicates, setDuplicates] = useState<Ticket[]>([]);
   const [draft, setDraft] = useState("");
   const [resolutionNote, setResolutionNote] = useState("");
   const [aiCategory, setAiCategory] = useState("");
@@ -70,10 +72,11 @@ export default function TicketDetailPage() {
     if (!accessToken || !id) return;
     setLoading(true);
     setLoadError(null);
-    void api<{ ticket: Ticket }>(`/tickets/${id}`, { token: accessToken })
+    void api<{ ticket: Ticket; duplicates?: Ticket[] }>(`/tickets/${id}`, { token: accessToken })
       .then((r) => {
         const loaded = unwrapTicketPayload(r);
         applyTicket(loaded);
+        setDuplicates(Array.isArray(r.duplicates) ? r.duplicates : []);
         setEditing({
           category: Boolean(loaded.aiFailed && !loaded.category),
           priority: Boolean(loaded.aiFailed && !loaded.priority),
@@ -92,9 +95,10 @@ export default function TicketDetailPage() {
     if (!accessToken || !id) return;
     setLoading(true);
     setLoadError(null);
-    void api<{ ticket: Ticket }>(`/tickets/${id}`, { token: accessToken })
+    void api<{ ticket: Ticket; duplicates?: Ticket[] }>(`/tickets/${id}`, { token: accessToken })
       .then((r) => {
         applyTicket(unwrapTicketPayload(r));
+        setDuplicates(Array.isArray(r.duplicates) ? r.duplicates : []);
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : "Could not load ticket"))
       .finally(() => setLoading(false));
@@ -363,13 +367,17 @@ export default function TicketDetailPage() {
             { icon: ticketPillIcons.ticket, label: "Ticket #", value: ticket.ticketNumber },
             { icon: ticketPillIcons.category, label: "Category", value: ticket.category || ticket.aiCategory || "Pending" },
             { icon: ticketPillIcons.worker, label: "Assigned worker", value: ticket.assignedAgent?.name ?? "Unassigned" },
-            { icon: ticketPillIcons.urgency, label: "Urgency", value: String(urgency) },
+            { icon: ticketPillIcons.urgency, label: "Priority", value: String(urgency) },
           ]}
           statusPill={statusLabel(ticket.status, isCustomer)}
         />
       </div>
 
       <TicketTimeline events={timelineEvents} />
+
+      {user && duplicates.length > 0 ? (
+        <DuplicateTicketsPanel duplicates={duplicates} currentId={ticket.id} role={user.role} />
+      ) : null}
 
       {isCustomer && (ticket.aiPriority || ticket.aiCategory || ticket.aiSummary) ? (
         <AiTriageSuggestion
@@ -451,9 +459,9 @@ export default function TicketDetailPage() {
             <p className="text-sm text-white/40">
               {isCustomer
                 ? ticket.workerRating
-                  ? "Completed. Thanks for your review!"
-                  : "Completed. Rate your worker below — your review helps others choose support."
-                : "Completed. Reopen the ticket to keep talking."}
+                  ? "Resolved. Thanks for your review!"
+                  : "Resolved. Rate your worker below — your review helps others choose support."
+                : "Resolved. Reopen the ticket to keep talking."}
             </p>
           ) : (
             <div className="flex gap-2">
@@ -540,7 +548,7 @@ export default function TicketDetailPage() {
                   disabled={!resolutionNote.trim()}
                   onClick={() => void advanceStatus("Completed")}
                 >
-                  Mark completed
+                  Mark resolved
                 </Button>
               </>
             ) : null}

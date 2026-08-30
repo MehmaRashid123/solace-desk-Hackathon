@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../lib/httpError.js";
 import { isTerminalStatus } from "../lib/ticketStatus.js";
 import { assertCanMutate, assertCanView, customerScope, type Actor } from "../lib/ticketAccess.js";
-import { parseOfficialCategory } from "../lib/taxonomy.js";
+import { parseOfficialCategory, parseOfficialPriority } from "../lib/taxonomy.js";
 import { suggestWorkers } from "./workers.js";
 
 export const ticketInclude = {

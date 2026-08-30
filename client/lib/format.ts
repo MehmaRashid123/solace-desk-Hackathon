@@ -19,18 +19,29 @@ export function normalizeCategory(raw?: string | null) {
 }
 
 export const CUSTOMER_STATUS: Record<TicketStatus, string> = {
-  New: "Waiting",
-  PendingWorkerResponse: "Pending worker",
-  Accepted: "Accepted",
+  New: "New",
+  PendingWorkerResponse: "Assigned",
+  Accepted: "Assigned",
   InProgress: "In progress",
-  Completed: "Completed",
+  Completed: "Resolved",
+  Rejected: "Rejected",
+  Cancelled: "Cancelled",
+};
+
+/** Hackathon-aligned labels for agents/admins (Assigned, Resolved). */
+export const AGENT_STATUS: Record<TicketStatus, string> = {
+  New: "New",
+  PendingWorkerResponse: "Assigned",
+  Accepted: "Assigned",
+  InProgress: "In Progress",
+  Completed: "Resolved",
   Rejected: "Rejected",
   Cancelled: "Cancelled",
 };
 
 export function statusLabel(status: TicketStatus, forCustomer = false) {
   if (forCustomer) return CUSTOMER_STATUS[status];
-  return status.replace(/([a-z])([A-Z])/g, "$1 $2");
+  return AGENT_STATUS[status];
 }
 
 export function formatStamp(value: string) {

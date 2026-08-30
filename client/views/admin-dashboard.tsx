@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
           <StatCard label="New queries" value={summary.newQueries} />
           <StatCard label="Pending response" value={summary.pendingSelection} />
           <StatCard label="Active tickets" value={summary.activeTickets} />
-          <StatCard label="Completed" value={summary.completedTickets} />
+          <StatCard label="Resolved" value={summary.completedTickets} />
           <StatCard label="Workers online" value={`${summary.availableWorkers}/${summary.totalWorkers}`} />
         </div>
       ) : null}

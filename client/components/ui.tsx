@@ -1,5 +1,6 @@
 import { APP_INITIAL } from "@/lib/brand";
 import { cn } from "@/lib/cn";
+import { statusLabel } from "@/lib/format";
 import type { TicketPriority, TicketStatus } from "@/lib/types";
 
 export function Glass({
@@ -46,10 +47,10 @@ const priorityStyles: Record<TicketPriority, string> = {
   HIGH: "text-danger",
 };
 
-export function StatusBadge({ status }: { status: TicketStatus }) {
+export function StatusBadge({ status, forCustomer = false }: { status: TicketStatus; forCustomer?: boolean }) {
   return (
     <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ring-1", statusStyles[status])}>
-      {status.replace(/([a-z])([A-Z])/g, " $1 $2")}
+      {statusLabel(status, forCustomer)}
     </span>
   );
 }

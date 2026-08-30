@@ -9,7 +9,8 @@ import { useSocket } from "@/context/SocketContext";
 import { api } from "@/lib/api";
 import { bookingSummary } from "@/lib/booking";
 import { normalizePriority, relativeTime } from "@/lib/format";
-import type { Message, Ticket, TicketPriority } from "@/lib/types";
+import { StatCard } from "@/components/dashboard";
+import type { Message, Stats, Ticket, TicketPriority } from "@/lib/types";
 import { ticketDetailPath } from "@/lib/routes";
 import { mergeTicketUpdate } from "@/lib/mergeTicket";
 import { unwrapTicketList } from "@/lib/apiHelpers";
@@ -95,7 +96,7 @@ function ActiveTicketRow({ ticket, note, busy, onNoteChange, onAdvance }: Active
                 Completing…
               </span>
             ) : (
-              "Mark completed"
+              "Mark resolved"
             )}
           </Button>
         </div>
@@ -109,6 +110,7 @@ export default function WorkerDashboardPage() {
   const { socket } = useSocket();
   const { toast } = useToast();
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bookingBusyId, setBookingBusyId] = useState<string | null>(null);
@@ -123,8 +125,12 @@ export default function WorkerDashboardPage() {
         setError(null);
       }
       try {
-        const ticketsRes = await api<{ tickets: Ticket[] }>("/tickets/mine", { token: accessToken });
+        const [ticketsRes, statsRes] = await Promise.all([
+          api<{ tickets: Ticket[] }>("/tickets/mine", { token: accessToken }),
+          api<{ stats: Stats }>("/stats", { token: accessToken }),
+        ]);
         setTickets(unwrapTicketList(ticketsRes));
+        setStats(statsRes.stats);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Could not load dashboard";
         if (!opts?.silent) setError(message);
@@ -225,7 +231,7 @@ export default function WorkerDashboardPage() {
       setTickets((prev) =>
         prev.map((t) => (t.id === updated.id ? mergeTicketUpdate(t, updated) : t)),
       );
-      toast(next === "Completed" ? "Ticket completed" : "Ticket in progress", "ok");
+      toast(next === "Completed" ? "Ticket resolved" : "Ticket in progress", "ok");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not update ticket");
     } finally {
@@ -257,6 +263,21 @@ export default function WorkerDashboardPage() {
           Refresh
         </Button>
       </div>
+
+      {loading && !stats ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
+        </div>
+      ) : stats ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Assigned" value={stats.assigned ?? stats.open ?? 0} />
+          <StatCard label="In progress" value={stats.inProgress ?? 0} />
+          <StatCard label="Resolved" value={stats.resolved ?? 0} />
+          <StatCard label="High priority" value={stats.high ?? stats.highPriorityCount ?? 0} />
+        </div>
+      ) : null}
 
       <Glass className="p-4 md:p-5">
         <div className="mb-3">

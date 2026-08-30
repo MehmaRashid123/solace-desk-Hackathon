@@ -36,9 +36,10 @@
 | **Customer** | Register/login, dashboard, create tickets, pick a worker (with ratings), live chat, ticket timeline, post-completion review |
 | **Worker** | Incoming booking accept/reject, assigned tickets, AI triage review, status updates, resolution notes, real-time notifications |
 | **Admin** | Separate admin dashboard, customer query overview, worker list + detail (stats, reviews, assigned tickets) |
-| **Real-time** | Socket.IO — live messages, typing indicators, booking alerts, status updates |
+| **Real-time, Email & Queue** | Socket.IO (live chat & status) + Nodemailer emails + Resilient Background Job Queue |
+| **Performance & APIs** | Redis caching (with in-memory fallback) + REST & GraphQL (`/graphql`) endpoints |
 | **AI** | Server-side triage (category, priority, summary). Keys optional — keyword fallback if none set |
-| **Quality** | Role guards, JWT + refresh cookie, Zod validation, 16 API tests (Vitest) |
+| **Quality** | Role guards, JWT + refresh cookie, Zod validation, 29 API tests (Vitest) |
 
 Full technical reference: **[PROJECT.md](./PROJECT.md)**
 

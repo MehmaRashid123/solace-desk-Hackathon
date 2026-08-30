@@ -88,8 +88,9 @@ export default function NewTicketPage() {
       if (duplicates?.length) {
         toast(`${duplicates.length} similar open ticket${duplicates.length === 1 ? "" : "s"} found`, "ok");
       }
-      if (ticket.aiPriority) {
-        toast(`AI suggests ${ticket.aiPriority} priority for this ticket`, "ok");
+      if (ticket.priority || ticket.aiPriority) {
+        const label = ticket.priority ?? ticket.aiPriority;
+        toast(`AI set priority to ${label} for this ticket`, "ok");
       }
       if (!user) {
         setError("Session expired — please sign in again");
@@ -126,6 +127,8 @@ export default function NewTicketPage() {
               ))}
             </Select>
           </Field>
+
+          <p className="text-xs text-muted">AI sets category and priority automatically when you submit.</p>
 
           <AiTriageSuggestion suggestion={suggestion} loading={previewLoading} />
 

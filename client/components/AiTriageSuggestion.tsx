@@ -87,7 +87,7 @@ export function AiTriageSuggestion({
       {suggestion.summary ? (
         <p className="mt-3 text-sm leading-relaxed text-muted">{suggestion.summary}</p>
       ) : null}
-      <p className="mt-2 text-[11px] text-secondary">A worker confirms the final priority after you submit.</p>
+      <p className="mt-2 text-[11px] text-secondary">Priority is set automatically from AI when you submit. An agent can adjust it during review.</p>
     </Glass>
   );
 }

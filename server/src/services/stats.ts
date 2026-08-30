@@ -1,32 +1,20 @@
 import type { Prisma, Role, TicketStatus } from "@prisma/client";
-
 import { prisma } from "../lib/prisma.js";
+import { cacheDel, cacheGet, cacheSet } from "../lib/redis.js";
 
-
-
-const CACHE_TTL_MS = 5_000;
+const STATS_CACHE_TTL_SEC = 60;
 
 const CATEGORIES = ["Billing", "Technical", "Account", "General"] as const;
 
 const STATUS_VALUES: TicketStatus[] = [
-
   "New",
-
   "PendingWorkerResponse",
-
   "Accepted",
-
   "InProgress",
-
   "Completed",
-
   "Rejected",
-
   "Cancelled",
-
 ];
-
-
 
 export type StatusFlowCounts = Record<TicketStatus, number>;
 
@@ -94,12 +82,8 @@ export type DashboardStats = {
 
 
 
-type CacheEntry = { at: number; data: DashboardStats };
-
-const cache = new Map<string, CacheEntry>();
-
 export function invalidateStatsCache() {
-  cache.clear();
+  void cacheDel("stats:*");
 }
 
 
@@ -255,12 +239,9 @@ function computeCategoryBreakdown(
 
 
 export async function getDashboardStats(role: Role, userId: string): Promise<DashboardStats> {
-
-  const cacheKey = `${role}:${userId}`;
-
-  const hit = cache.get(cacheKey);
-
-  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
+  const cacheKey = `stats:${role}:${userId}`;
+  const hit = await cacheGet<DashboardStats>(cacheKey);
+  if (hit) return hit;
 
 
 
@@ -714,9 +695,8 @@ export async function getDashboardStats(role: Role, userId: string): Promise<Das
 
 
 
-  cache.set(cacheKey, { at: Date.now(), data: stats });
+  await cacheSet(cacheKey, stats, STATS_CACHE_TTL_SEC);
 
   return stats;
-
 }
 
