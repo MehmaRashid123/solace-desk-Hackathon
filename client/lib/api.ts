@@ -1,4 +1,16 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const DEFAULT_API = "http://localhost:4000";
+
+function normalizeBase(url: string) {
+  return url.trim().replace(/\/+$/, "");
+}
+
+const API = normalizeBase(process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API);
+const SOCKET = normalizeBase(process.env.NEXT_PUBLIC_SOCKET_URL ?? API);
+
+function apiUrl(path: string) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API}${normalizedPath}`;
+}
 
 type RequestOptions = {
   method?: string;
@@ -29,7 +41,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
-      const res = await fetch(`${API}/api/auth/refresh`, {
+      const res = await fetch(apiUrl("/api/auth/refresh"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -59,10 +71,11 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   };
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
-  const url = path.startsWith("/api") || path.startsWith("/health") ? path : `/api${path}`;
+  const urlPath = path.startsWith("/api") || path.startsWith("/health") ? path : `/api${path}`;
+  const requestUrl = apiUrl(urlPath);
   let res: Response;
   try {
-    res = await fetch(`${API}${url}`, {
+    res = await fetch(requestUrl, {
       method: options.method ?? "GET",
       headers,
       credentials: "include",
@@ -80,7 +93,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     data?: T;
     error?: string;
   } & T;
-  if (res.status === 401 && !options._retried && !isAuthPath(url)) {
+  if (res.status === 401 && !options._retried && !isAuthPath(urlPath)) {
     const nextToken = await refreshAccessToken();
     if (nextToken) {
       return api<T>(path, { ...options, token: nextToken, _retried: true });
@@ -97,5 +110,5 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
 export const endpoints = {
   api: API,
-  socket: process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:4000",
+  socket: SOCKET,
 };
