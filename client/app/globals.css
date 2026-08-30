@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Solace dark theme — design tokens */
+:root {
+  color-scheme: dark;
+  --bg: #0A0A0A;
+  --card: #141414;
+  --card-2: #161616;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent: #FF5722;
+  --accent-grad-start: #FF7A45;
+  --accent-grad-end: #FF3D1F;
+  --success: #22C55E;
+  --danger: #EF4444;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9CA3AF;
+  --chart-2: #8B5CF6;
+  --radius-card: 18px;
+  --radius-pill: 999px;
+  --sidebar: 240px;
+
+  /* Legacy aliases used across existing pages */
+  --surface: var(--card);
+  --surface-2: var(--card-2);
+  --border: var(--card-border);
+  --accent-2: var(--accent-grad-start);
+  --accent-3: var(--accent-grad-end);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --radius: var(--radius-card);
+}
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+.bg-app {
+  background:
+    radial-gradient(820px 380px at 6% -10%, rgba(255, 87, 34, 0.08), transparent 52%),
+    var(--bg);
+}
+
+.nx-card,
+.glass {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+}
+
+.nx-card-soft {
+  background: var(--card-2);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+}
+
+.accent-gradient {
+  background: linear-gradient(135deg, var(--accent-grad-start), var(--accent-grad-end));
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+}

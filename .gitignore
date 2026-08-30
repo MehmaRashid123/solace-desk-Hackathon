@@ -1,0 +1,14 @@
+node_modules
+dist
+.next
+.turbo
+.vercel
+coverage
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+server/generated
+client/next-env.d.ts

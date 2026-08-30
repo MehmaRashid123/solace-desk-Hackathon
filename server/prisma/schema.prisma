@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  AGENT
+  ADMIN
+}
+
+enum TicketStatus {
+  New
+  PendingWorkerResponse
+  Accepted
+  InProgress
+  Completed
+  Rejected
+  Cancelled
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketEventType {
+  STATUS_CHANGE
+  ASSIGNED
+  REOPENED
+}
+
+model User {
+  id              String         @id @default(cuid())
+  name            String
+  email           String         @unique
+  passwordHash    String
+  role            Role           @default(CUSTOMER)
+  avatarHue       Int            @default(200)
+  category        String?
+  avgRating       Float          @default(0)
+  ratingCount     Int            @default(0)
+  isAvailable     Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  ticketsCreated  Ticket[]       @relation("CustomerTickets")
+  ticketsAssigned Ticket[]       @relation("AgentTickets")
+  messages        Message[]
+  ticketEvents    TicketEvent[]
+  refreshTokens   RefreshToken[]
+  ratingsGiven    WorkerRating[] @relation("CustomerRatings")
+  ratingsReceived WorkerRating[] @relation("WorkerRatings")
+}
+
+model Ticket {
+  id                 String          @id @default(cuid())
+  ticketNumber       String          @unique
+  customerId         String
+  customer           User            @relation("CustomerTickets", fields: [customerId], references: [id])
+  assignedAgentId    String?
+  assignedAgent      User?           @relation("AgentTickets", fields: [assignedAgentId], references: [id])
+  subject            String
+  description        String
+  category           String?
+  priority           TicketPriority?
+  status             TicketStatus    @default(New)
+  urgency            TicketPriority?
+  suggestedWorkerIds Json?
+  rejectionReason    String?
+  aiSummary          String?
+  aiCategory         String?
+  aiPriority         String?
+  aiFailed           Boolean         @default(false)
+  aiConfidenceRaw    Json?
+  resolutionNote     String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  messages           Message[]
+  events             TicketEvent[]
+  workerRating       WorkerRating?
+
+  @@index([status])
+  @@index([assignedAgentId])
+  @@index([customerId])
+}
+
+model WorkerRating {
+  id         String   @id @default(cuid())
+  ticketId   String   @unique
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  workerId   String
+  worker     User     @relation("WorkerRatings", fields: [workerId], references: [id])
+  customerId String
+  customer   User     @relation("CustomerRatings", fields: [customerId], references: [id])
+  stars      Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([workerId, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation(fields: [senderId], references: [id])
+  senderRole Role
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model TicketEvent {
+  id        String          @id @default(cuid())
+  ticketId  String
+  ticket    Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  type      TicketEventType
+  fromValue String?
+  toValue   String?
+  actorId   String
+  actor     User            @relation(fields: [actorId], references: [id])
+  createdAt DateTime        @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([type, createdAt])
+}
+
+model TicketSequence {
+  year Int @id
+  last Int @default(0)
+}
+
+model AssignmentCursor {
+  category    String  @id
+  lastAgentId String?
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
