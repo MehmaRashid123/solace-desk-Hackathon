@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import { config } from "./config.js";
+import { corsOptions } from "./lib/cors.js";
 import { authRouter } from "./routes/auth.js";
 import { ticketsRouter } from "./routes/tickets.js";
 import { usersRouter } from "./routes/users.js";
@@ -15,12 +15,7 @@ import { sendOk } from "./lib/respond.js";
 export function createApp() {
   const app = express();
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-  app.use(
-    cors({
-      origin: config.clientOrigin,
-      credentials: true,
-    }),
-  );
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
 

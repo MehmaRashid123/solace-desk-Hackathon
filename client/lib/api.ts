@@ -60,12 +60,20 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
 
   const url = path.startsWith("/api") || path.startsWith("/health") ? path : `/api${path}`;
-  const res = await fetch(`${API}${url}`, {
-    method: options.method ?? "GET",
-    headers,
-    credentials: "include",
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API}${url}`, {
+      method: options.method ?? "GET",
+      headers,
+      credentials: "include",
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+  } catch {
+    throw new ApiError(
+      0,
+      `Cannot reach API at ${API}. Check NEXT_PUBLIC_API_URL and that the backend is running.`,
+    );
+  }
 
   const payload = (await res.json().catch(() => ({}))) as {
     success?: boolean;
