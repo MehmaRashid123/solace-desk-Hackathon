@@ -14,8 +14,7 @@ import type { AdminWorkerDetail, Ticket } from "@/lib/types";
 import { Avatar, Glass, PriorityChip, Skeleton, StatusBadge } from "@/components/ui";
 
 function AdminTicketRow({ ticket }: { ticket: Ticket }) {
-const priority = ticket.priority ?? (normalizePriority(ticket.aiPriority) || null);  return (
-    <Glass className="p-4">
+const priority = ticket.priority ?? (normalizePriority(ticket.aiPriority) || null);    <Glass className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-[11px] uppercase tracking-wider text-secondary">{ticket.ticketNumber}</p>
