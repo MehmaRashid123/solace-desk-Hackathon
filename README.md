@@ -4,7 +4,7 @@
 
 ## Live demo
 
-- **App:** https://solace-desk-hackathon.vercel.app *(or your Vercel URL)*
+- **App:** https://solace-desk-hackathon-client-kappa.vercel.app/
 - **API:** https://solace-desk-hackathon.onrender.com/health
 - **Demo login:** Sign-in page one-click chips · password `password123`
 
